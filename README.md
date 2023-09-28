@@ -15,3 +15,16 @@ Changing the desired size will add/decrease the spheres, making sure to retain p
 Changing the bounds/transform/sphere radius will respawn all the spheres with the updated info
 
 All of the jobs are burst compiled, so that should be turned on in the editor.
+
+
+sources on other code/references i've used here are these:
+
+https://allenchou.net/2020/01/dot-product-projection-reflection/ - sphere bounce on plane
+
+https://www.habrador.com/tutorials/math/4-plane-ray-intersection/ - ray intersection with plane
+
+https://github.com/Unity-Technologies/Megacity-Sample/tree/master/Assets/Scripts/Utils/KDTree - kdtree for sphere collisions with eachother
+
+https://gist.github.com/mstevenson/5103365#file-fps-cs - fps counter (fps is limited to 60 in build)
+
+There's a build in the "Demo" folder, for the purposes of making sure burst works. But most of the relevant features are more obvious in the editor
