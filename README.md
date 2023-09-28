@@ -17,7 +17,7 @@ Changing the bounds/transform/sphere radius will respawn all the spheres with th
 All of the jobs are burst compiled, so that should be turned on in the editor.
 
 
-sources on other code/references i've used here are these:
+sources on other code/references i've used here:
 
 https://allenchou.net/2020/01/dot-product-projection-reflection/ - sphere bounce on plane
 
