@@ -12,4 +12,6 @@ Besides those, you can also just directly set the desired_obj_count in the inspe
 
 Changing the desired size will add/decrease the spheres, making sure to retain previous data
 
-Changing the bounds/transform/sphere radius will respawn all the balls with the updated info
+Changing the bounds/transform/sphere radius will respawn all the spheres with the updated info
+
+All of the jobs are burst compiled, so that should be turned on in the editor.
