@@ -29,8 +29,9 @@ public class JobController : MonoBehaviour
     #endregion
 
     #region Variables/non parameters
-    public delegate void OnBoundsChange();
-    public OnBoundsChange onBoundsChanged;
+    private bool collision_between_spheres_last_frame = false;
+    public delegate void OnSettingsChange();
+    public OnSettingsChange onBoundsChanged;
     private Transform sphere_container;
     // sphere visuals pooling
     public class SphereVisuals
@@ -38,12 +39,13 @@ public class JobController : MonoBehaviour
         public Renderer[] renderers;
         public Transform transform;
         public bool active;
-        public void Enable(bool active)
+        public bool Enable(bool active)
         {
             if (this.active == active)
-                return;
+                return false;
             this.active = active;
             transform.gameObject.SetActive(active);
+            return true;
         }
     }
     private List<SphereVisuals> sphere_visuals;
@@ -420,12 +422,15 @@ public class JobController : MonoBehaviour
 
     private unsafe void Init()
     {
+        collision_between_spheres_last_frame = collisions_between_spheres;
+
         sphere_container = new GameObject("Sphere_Container").transform;
         sphere_visuals = new List<SphereVisuals>();
         mat_block = new MaterialPropertyBlock();
 
         onBoundsChanged += () =>
         {
+            data.sphere_radius = sphere_radius;
             data.CalcBoundPlanes(bounds, transform.rotation, transform.position, transform.lossyScale);
             data.SetSize(0);
         };
@@ -457,13 +462,17 @@ public class JobController : MonoBehaviour
         CheckBoundsForChanges();
         UpdateInput();
         UpdateObjectCount();
-        StartJobs();
         UpdateRenderers();
+        StartJobs();
     }
 
     private void CheckBoundsForChanges()
     {
-        if (data.bounds_properties.bounds.Equals(bounds) && data.bounds_properties.rotation == transform.rotation && (Vector3)data.bounds_properties.position_offset == transform.position && (Vector3)data.bounds_properties.scale == transform.lossyScale)
+        if (data.bounds_properties.bounds.Equals(bounds) && 
+            data.bounds_properties.rotation == transform.rotation && 
+            (Vector3)data.bounds_properties.position_offset == transform.position && 
+            (Vector3)data.bounds_properties.scale == transform.lossyScale &&
+            data.sphere_radius == sphere_radius)
             return;
         onBoundsChanged?.Invoke();
     }
@@ -498,7 +507,7 @@ public class JobController : MonoBehaviour
     // try to activate a pooled sphere. If there is no inactive one, spawn a new one, add it to the pool
     private SphereVisuals SpawnSphere()
     {
-        for(int i = 0; i < sphere_visuals.Count; i++)
+        for (int i = 0; i < sphere_visuals.Count; i++)
         {
             var sv = sphere_visuals[i];
             if (!sv.active)
@@ -508,7 +517,6 @@ public class JobController : MonoBehaviour
             }
         }
         var go = Instantiate(obj_prefab, sphere_container);
-        go.transform.localScale = Vector3.one * sphere_radius * 2;
         SphereVisuals sphere_data = new SphereVisuals();
         sphere_data.transform = go.transform;
         sphere_data.renderers = go.GetComponentsInChildren<Renderer>();
@@ -542,9 +550,11 @@ public class JobController : MonoBehaviour
             if (desired_obj_count > 0)
             {
                 Transform[] new_transform_arr = new Transform[desired_obj_count];
+                var final_scale = Vector3.one * sphere_radius * 2;
                 for (int i = 0; i < desired_obj_count; i++)
                 {
                     new_transform_arr[i] = sphere_visuals[i].transform;
+                    sphere_visuals[i].transform.localScale = final_scale;
                 }
                 data.taa = new TransformAccessArray(new_transform_arr);
             }
@@ -553,19 +563,25 @@ public class JobController : MonoBehaviour
 
     private unsafe void UpdateRenderers()
     {
+        // minor hack, if you disable the collision jobs, there's nobody to tell the spheres that they're supposed to go back to their original color
+        bool collision_has_been_toggled = collision_between_spheres_last_frame != collisions_between_spheres;
         for(int i = 0; i < data.count; i++)
         {
             var instance = new JobObjectInstance(i, data.pointers);
-            if (!instance.color_dirty)
+            if (!instance.color_dirty && !collision_has_been_toggled)
                 continue;
             var renderers = sphere_visuals[i].renderers;
-            mat_block.SetColor("_Color", new Color(instance.final_color.x, instance.final_color.y, instance.final_color.z, 1));
+            if (!collisions_between_spheres)
+                mat_block.SetColor("_Color", new Color(instance.original_color.x, instance.original_color.y, instance.original_color.z, 1));
+            else
+                mat_block.SetColor("_Color", new Color(instance.final_color.x, instance.final_color.y, instance.final_color.z, 1));
             for(int j = 0; j < renderers.Length; j++)
             {
                 var rend = renderers[j];
                 rend.SetPropertyBlock(mat_block);
             }
         }
+        collision_between_spheres_last_frame = collisions_between_spheres;
     }
 
     #region Jobs
